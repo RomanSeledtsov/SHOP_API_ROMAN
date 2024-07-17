@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, generics
 from product.serializer import CategorySerializer, ProductSerializer, ReviewSerializer
 from product.models import Category, Product, Review
 
@@ -51,3 +51,5 @@ def reviews_detail_api_view(request, id):
     views = Review.objects.get(id=id)
     data = ReviewSerializer(views, many=False).data
     return Response(data=data)
+
+
