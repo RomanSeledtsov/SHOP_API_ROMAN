@@ -22,7 +22,7 @@ class Product(models.Model):
     price = models.PositiveIntegerField(default=150)
     category = models.ForeignKey(Category,
                                  related_name='categories',
-                                 on_delete=models.CASCADE),
+                                 on_delete=models.CASCADE, null=True, blank=True)
     tags = models.ManyToManyField(ProductTag,
                                   related_name='products')
 
