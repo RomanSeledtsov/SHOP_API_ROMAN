@@ -1,5 +1,6 @@
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
-from product.models import Category, Product, Review
+from product.models import Category, Product, Review, ProductTag
 from django.db.models import Avg
 
 
@@ -8,16 +9,26 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = '__all__'
+        fields = ['name', 'count_products']
 
     def get_products_count(self, count):
         return count.products.count()
 
 
+class CategoryValueSerializer(serializers.Serializer):
+    name = serializers.CharField(min_length=1, max_length=50)
+
+
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
-        fields = '__all__'
+        fields = ['id', 'product', 'text', 'stars']
+
+
+class ReviewValidateSerializer(serializers.Serializer):
+    text = serializers.CharField(min_length=1, max_length=100)
+    product = serializers.IntegerField(min_value=1)
+    stars = serializers.IntegerField(min_value=1, max_value=5)
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -27,11 +38,26 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['title', 'description', 'price', 'category', 'id', 'reviews', 'average_rating']
-        depth = 1
 
     def get_average_rating(self, product):
-        reviews = Review.objects.filter(product=product)
-        if reviews.exists():
-            average_rating = reviews.aggregate(Avg('stars'))['stars__avg']
-            return average_rating or 0
-        return 0
+        reviews = product.reviews.all()
+        if reviews:
+            sum_reviews = sum(i.stars for i in reviews)
+            average_rating = sum_reviews / len(reviews)
+            return average_rating
+        return None
+
+
+class ProductValidateSerializer(serializers.Serializer):
+    title = serializers.CharField(min_length=1, max_length=50)
+    description = serializers.CharField(min_length=1, max_length=100, required=False)
+    price = serializers.IntegerField(min_value=1)
+    category = serializers.IntegerField(min_value=1)
+    tags = serializers.ListField(child=serializers.IntegerField(min_value=1), required=False)
+
+    def validate_tags(self, tags):
+        tag_a = set(tags)
+        tag_db = ProductTag.objects.filter(id__in=tag_a)
+        if len(tag_db) != len(tags):
+            raise ValidationError("Tags does not exist ")
+        return tags
